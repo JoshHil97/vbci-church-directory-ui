@@ -1,5 +1,5 @@
-import { FormEvent, useEffect, useState } from "react";
-import vbciLogo from "./assets/vbci-logo.png";
+import { useState } from "react";
+import type { FormEvent } from "react";
 
 type MemberPayload = {
   fullName: string;
