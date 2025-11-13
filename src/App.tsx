@@ -1,5 +1,5 @@
-import { useState } from "react";
-import type { FormEvent } from "react";
+import { useEffect, useState } from "react";
+import type { FormEvent, ChangeEvent } from "react";
 
 type MemberPayload = {
   fullName: string;
@@ -14,12 +14,12 @@ interface Member extends MemberPayload {
 
 // Use env variable if set, otherwise default to localhost (good for dev)
 const API_BASE =
-  (import.meta.env.VITE_API_BASE_URL ??
-    "http://localhost:8080") + "/api/members";
+  (import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080") +
+  "/api/members";
 
-export default function App() {
+function App() {
   const [members, setMembers] = useState<Member[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   const [form, setForm] = useState<MemberPayload>({
@@ -29,76 +29,90 @@ export default function App() {
     ministry: "",
   });
 
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState<string>("");
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  // ---- LOAD MEMBERS ----
-  const fetchMembers = async () => {
+  // ---------- LOAD MEMBERS ----------
+  const fetchMembers = async (): Promise<void> => {
     try {
       setLoading(true);
       setError(null);
+
       const res = await fetch(API_BASE);
-      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(`Failed to load members (${res.status})`);
+      }
+
+      const data: Member[] = await res.json();
       setMembers(data);
     } catch (err) {
       console.error(err);
-      setError("Could not load members from the server.");
+      setError("Could not load members. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchMembers();
+    void fetchMembers();
   }, []);
 
-  // ---- FORM HANDLERS ----
-  const handleChange = (field: keyof MemberPayload, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
+  // ---------- FORM HANDLERS ----------
+  const handleInputChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const resetForm = () => {
-    setForm({
-      fullName: "",
-      email: "",
-      phone: "",
-      ministry: "",
-    });
-    setEditingId(null);
-  };
-
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!form.fullName || !form.email) return;
+    setError(null);
+
+    if (!form.fullName.trim() || !form.email.trim()) {
+      setError("Full name and email are required.");
+      return;
+    }
 
     try {
-      setError(null);
+      setLoading(true);
 
-      if (editingId === null) {
-        // CREATE
-        await fetch(API_BASE, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
-        });
-      } else {
-        // UPDATE
-        await fetch(`${API_BASE}/${editingId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
-        });
+      const method = editingId === null ? "POST" : "PUT";
+      const url =
+        editingId === null ? API_BASE : `${API_BASE}/${encodeURIComponent(editingId)}`;
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(form),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Failed to save member (${res.status})`);
       }
 
-      resetForm();
-      fetchMembers();
+      // Refresh list
+      await fetchMembers();
+
+      // Reset form + editing state
+      setForm({
+        fullName: "",
+        email: "",
+        phone: "",
+        ministry: "",
+      });
+      setEditingId(null);
     } catch (err) {
       console.error(err);
-      setError("Something went wrong saving this member.");
+      setError("Could not save member. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleEdit = (member: Member) => {
+  const startEdit = (member: Member) => {
     setForm({
       fullName: member.fullName,
       email: member.email,
@@ -108,221 +122,264 @@ export default function App() {
     setEditingId(member.id);
   };
 
+  const cancelEdit = () => {
+    setEditingId(null);
+    setForm({
+      fullName: "",
+      email: "",
+      phone: "",
+      ministry: "",
+    });
+  };
+
   const handleDelete = async (id: number) => {
+    if (!window.confirm("Delete this member?")) return;
+
     try {
-      setError(null);
-      await fetch(`${API_BASE}/${id}`, { method: "DELETE" });
-      fetchMembers();
+      setLoading(true);
+      const res = await fetch(`${API_BASE}/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        throw new Error(`Failed to delete member (${res.status})`);
+      }
+
+      // Optimistic update
+      setMembers((prev) => prev.filter((m) => m.id !== id));
     } catch (err) {
       console.error(err);
-      setError("Failed to delete member.");
+      setError("Could not delete member. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  // ---- FILTERED MEMBERS ----
-  const filteredMembers = members.filter((m) => {
+  // ---------- FILTERED LIST ----------
+  const filteredMembers = members.filter((member) => {
+    if (!search.trim()) return true;
     const q = search.toLowerCase();
     return (
-      m.fullName.toLowerCase().includes(q) ||
-      m.email.toLowerCase().includes(q) ||
-      (m.phone || "").toLowerCase().includes(q) ||
-      (m.ministry || "").toLowerCase().includes(q)
+      member.fullName.toLowerCase().includes(q) ||
+      member.email.toLowerCase().includes(q) ||
+      member.phone.toLowerCase().includes(q) ||
+      member.ministry.toLowerCase().includes(q)
     );
   });
 
-  // ---- UI ----
+  const totalMembers = members.length;
+  const matchingCount = filteredMembers.length;
+
   return (
-    <div className="min-h-screen bg-[#060016] text-violet-50 flex flex-col items-center px-4 py-10">
-      {/* HEADER */}
-      <header className="w-full max-w-6xl flex flex-col items-center mb-10 space-y-4">
-        <div className="flex flex-col md:flex-row items-center gap-4">
-          <div className="w-20 h-20 rounded-full bg-black/40 flex items-center justify-center overflow-hidden border border-violet-500/70 shadow-lg shadow-violet-900/60">
-            <img
-              src={vbciLogo}
-              alt="VBCI Logo"
-              className="w-16 h-16 object-contain"
-            />
+    <div className="min-h-screen bg-[#050014] text-white flex justify-center px-4 py-10">
+      <div className="w-full max-w-6xl">
+        {/* HEADER */}
+        <header className="flex items-center gap-4 mb-8">
+          {/* If your logo file is different, update the src below or remove the img */}
+          <div className="h-12 w-12 rounded-full bg-[#3b0b6d] flex items-center justify-center text-xs font-bold">
+            VBCI
           </div>
-          <div className="text-center md:text-left">
-            <p className="text-xs tracking-[0.2em] text-violet-300 uppercase mb-1">
-              Victory Bible Church International
-            </p>
-            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">
-              VBCI{" "}
-              <span className="bg-gradient-to-r from-violet-400 via-purple-300 to-pink-300 bg-clip-text text-transparent">
-                Church Directory
-              </span>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold">
+              VBCI Church Directory
             </h1>
-            <p className="text-[11px] text-violet-200/80 mt-1">
-              Jesus is our victory — and this tool helps us care for the people
-              He sends.
+            <p className="text-sm text-purple-200">
+              Keep track of members and ministries — powered by your Java Spring
+              Boot API and React frontend.
             </p>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <main className="w-full max-w-6xl space-y-8">
-        {/* TOP ROW: FORM + SEARCH */}
-        <section className="grid gap-6 md:grid-cols-[1.6fr,1fr]">
-          {/* FORM CARD */}
-          <form
-            onSubmit={handleSubmit}
-            className="bg-[#12002b] border border-violet-700/70 rounded-2xl px-6 py-5 shadow-xl shadow-violet-900/50"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-violet-100">
-                {editingId ? "Edit Member" : "Add New Member"}
-              </h2>
-              {editingId && (
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="text-xs text-violet-300 hover:text-violet-100 underline"
-                >
-                  Cancel edit
-                </button>
-              )}
-            </div>
-
-            <div className="space-y-3">
-              <input
-                placeholder="Full Name *"
-                value={form.fullName}
-                onChange={(e) => handleChange("fullName", e.target.value)}
-                className="w-full p-2.5 rounded-lg bg-[#0b001c] border border-violet-700/70 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
-              />
-              <input
-                placeholder="Email *"
-                value={form.email}
-                onChange={(e) => handleChange("email", e.target.value)}
-                className="w-full p-2.5 rounded-lg bg-[#0b001c] border border-violet-700/70 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
-              />
-              <input
-                placeholder="Phone"
-                value={form.phone}
-                onChange={(e) => handleChange("phone", e.target.value)}
-                className="w-full p-2.5 rounded-lg bg-[#0b001c] border border-violet-700/70 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
-              />
-              <input
-                placeholder="Ministry (Tech, Worship, Youth, Sound...)"
-                value={form.ministry}
-                onChange={(e) => handleChange("ministry", e.target.value)}
-                className="w-full p-2.5 rounded-lg bg-[#0b001c] border border-violet-700/70 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="mt-4 w-full bg-gradient-to-r from-violet-500 via-purple-500 to-pink-400 py-2.5 rounded-lg text-sm font-semibold text-[#060016] hover:opacity-90 transition"
-            >
-              {editingId ? "Update Member" : "Save Member"}
-            </button>
-
-            <p className="text-[11px] text-violet-200/70 mt-2">
-              * Name and email are required. Data is stored via the VBCI Church
-              Directory API.
-            </p>
+        {/* TOP GRID: FORM + SEARCH */}
+        <div className="grid gap-6 md:grid-cols-2 mb-8">
+          {/* ADD / EDIT FORM */}
+          <section className="bg-[#16002b] border border-purple-700/60 rounded-2xl shadow-[0_0_40px_rgba(168,85,247,0.35)] p-6">
+            <h2 className="text-lg font-semibold mb-4">
+              {editingId === null ? "Add New Member" : "Edit Member"}
+            </h2>
 
             {error && (
-              <p className="text-[11px] text-red-300 mt-2">{error}</p>
+              <p className="mb-3 text-sm text-red-400 bg-red-500/10 border border-red-500/40 rounded-md px-3 py-2">
+                {error}
+              </p>
             )}
-          </form>
 
-          {/* SEARCH CARD */}
-          <div className="bg-[#100025] border border-violet-700/60 rounded-2xl px-6 py-5 space-y-4">
-            <h2 className="text-lg font-semibold text-violet-100">
-              Search Members
-            </h2>
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div>
+                <label className="block text-sm mb-1">Full Name *</label>
+                <input
+                  type="text"
+                  name="fullName"
+                  value={form.fullName}
+                  onChange={handleInputChange}
+                  className="w-full rounded-md bg-[#0c0018] border border-purple-500/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400"
+                  placeholder="e.g. Sarah Mensah"
+                />
+              </div>
+              <div>
+                <label className="block text-sm mb-1">Email *</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={form.email}
+                  onChange={handleInputChange}
+                  className="w-full rounded-md bg-[#0c0018] border border-purple-500/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400"
+                  placeholder="e.g. sarah@example.com"
+                />
+              </div>
+              <div>
+                <label className="block text-sm mb-1">Phone</label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={form.phone}
+                  onChange={handleInputChange}
+                  className="w-full rounded-md bg-[#0c0018] border border-purple-500/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400"
+                  placeholder="e.g. 07..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm mb-1">Ministry</label>
+                <input
+                  type="text"
+                  name="ministry"
+                  value={form.ministry}
+                  onChange={handleInputChange}
+                  className="w-full rounded-md bg-[#0c0018] border border-purple-500/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400"
+                  placeholder="Tech, Worship, Youth..."
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 rounded-md bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-2 text-sm font-semibold hover:from-purple-400 hover:to-pink-400 disabled:opacity-60"
+                >
+                  {editingId === null
+                    ? loading
+                      ? "Saving..."
+                      : "Save Member"
+                    : loading
+                    ? "Updating..."
+                    : "Update Member"}
+                </button>
+                {editingId !== null && (
+                  <button
+                    type="button"
+                    onClick={cancelEdit}
+                    className="rounded-md border border-purple-400 px-4 py-2 text-sm hover:bg-purple-900/40"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+
+              <p className="text-[11px] text-purple-200/80 pt-1">
+                * Name and email are required. Data is stored via the VBCI
+                Church Directory API.
+              </p>
+            </form>
+          </section>
+
+          {/* SEARCH / STATS */}
+          <section className="bg-[#16002b] border border-purple-700/60 rounded-2xl p-6">
+            <h2 className="text-lg font-semibold mb-4">Search Members</h2>
+
             <input
-              placeholder="Search by name, email, phone, or ministry…"
+              type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full p-2.5 rounded-lg bg-[#0b001c] border border-violet-700/70 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+              className="w-full rounded-md bg-[#0c0018] border border-purple-500/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400 mb-4"
+              placeholder="Search by name, email, or ministry..."
             />
-            <div className="text-xs text-violet-200/85 space-y-1">
+
+            <div className="text-sm space-y-1 text-purple-100">
               <p>
-                Total members:{" "}
-                <span className="font-semibold text-violet-300">
-                  {members.length}
-                </span>
+                <span className="font-semibold">Total members:</span>{" "}
+                {totalMembers}
               </p>
               <p>
-                Matching search:{" "}
-                <span className="font-semibold text-violet-300">
-                  {filteredMembers.length}
-                </span>
+                <span className="font-semibold">Matching search:</span>{" "}
+                {matchingCount}
               </p>
-              {loading && (
-                <p className="text-[11px] text-violet-300/80">
-                  Loading latest data from the server…
-                </p>
-              )}
             </div>
+          </section>
+        </div>
+
+        {/* MEMBERS TABLE */}
+        <section className="bg-[#16002b] border border-purple-700/60 rounded-2xl shadow-[0_0_40px_rgba(88,28,135,0.4)] overflow-hidden">
+          <div className="px-6 py-4 border-b border-purple-700/70">
+            <h2 className="text-lg font-semibold">All Members</h2>
           </div>
-        </section>
 
-        {/* TABLE SECTION */}
-        <section className="bg-[#0c001f] border border-violet-700/60 rounded-2xl p-5 shadow-lg shadow-violet-900/50">
-          <h2 className="text-lg font-semibold mb-4 text-violet-100">
-            All Members
-          </h2>
-
-          {filteredMembers.length === 0 && !loading ? (
-            <p className="text-sm text-violet-200/80">
-              No members found. Try adjusting your search or adding a new member
-              above.
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="bg-[#150031] text-violet-100">
-                    <th className="p-3 text-left">Name</th>
-                    <th className="p-3 text-left">Email</th>
-                    <th className="p-3 text-left">Phone</th>
-                    <th className="p-3 text-left">Ministry</th>
-                    <th className="p-3 text-right w-40">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredMembers.map((m) => (
-                    <tr
-                      key={m.id}
-                      className="border-t border-violet-800/60 hover:bg-[#150032] transition"
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead className="bg-[#1f0038] text-purple-100/90">
+                <tr>
+                  <th className="px-6 py-3 text-left font-medium">Name</th>
+                  <th className="px-6 py-3 text-left font-medium">Email</th>
+                  <th className="px-6 py-3 text-left font-medium">Phone</th>
+                  <th className="px-6 py-3 text-left font-medium">Ministry</th>
+                  <th className="px-6 py-3 text-left font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredMembers.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="px-6 py-6 text-center text-purple-200"
                     >
-                      <td className="p-3">{m.fullName}</td>
-                      <td className="p-3 text-violet-200">{m.email}</td>
-                      <td className="p-3 text-violet-200">{m.phone}</td>
-                      <td className="p-3 text-violet-200">{m.ministry}</td>
-                      <td className="p-3 text-right space-x-2">
+                      {loading
+                        ? "Loading members..."
+                        : "No members found. Try adding one above."}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredMembers.map((member: Member) => (
+                    <tr
+                      key={member.id}
+                      className="border-t border-purple-800/70 hover:bg-purple-900/30"
+                    >
+                      <td className="px-6 py-3 whitespace-nowrap">
+                        {member.fullName}
+                      </td>
+                      <td className="px-6 py-3 whitespace-nowrap">
+                        {member.email}
+                      </td>
+                      <td className="px-6 py-3 whitespace-nowrap">
+                        {member.phone}
+                      </td>
+                      <td className="px-6 py-3 whitespace-nowrap">
+                        {member.ministry}
+                      </td>
+                      <td className="px-6 py-3 whitespace-nowrap space-x-2">
                         <button
                           type="button"
-                          onClick={() => handleEdit(m)}
-                          className="text-xs px-3 py-1 rounded-full bg-violet-500/90 hover:bg-violet-400 text-black font-semibold"
+                          onClick={() => startEdit(member)}
+                          className="inline-flex items-center rounded-md border border-purple-400 px-3 py-1 text-xs hover:bg-purple-900/60"
                         >
                           Edit
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleDelete(m.id)}
-                          className="text-xs px-3 py-1 rounded-full bg-red-500/90 hover:bg-red-400 text-white font-semibold"
+                          onClick={() => handleDelete(member.id)}
+                          className="inline-flex items-center rounded-md bg-red-500/90 px-3 py-1 text-xs hover:bg-red-400"
                         >
                           Delete
                         </button>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </section>
-
-        {/* FOOTER */}
-        <footer className="pt-4 text-center text-[11px] text-violet-300/80">
-          Victory Bible Church International • Jesus is our Victory
-        </footer>
-      </main>
+      </div>
     </div>
   );
 }
+
+export default App;
