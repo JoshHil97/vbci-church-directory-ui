@@ -42,17 +42,14 @@ Original Python version:
 
 ## 🖼 Screenshots
 
-### Add New Member  
 ![Add Member](./screenshots/add-member.png)
 
-### All Members View  
 ![All Members](./screenshots/all-members.png)
 
-### Search & Filtering  
 ![Search Members](./screenshots/search-results.png)
 
-### Edit Member  
 ![Edit Member](./screenshots/edit-member.png)
+
 
 ---
 
