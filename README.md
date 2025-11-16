@@ -56,7 +56,7 @@ Original Python version:
 ## 🔄 Evolution of This Project  
 ### **From Streetlight → To Full-Stack App**
 
-**Version 1 — “Streetlight” (Original Python Version)**  
+**Version 1 — “Streamlit” (Original Python Version)**  
 - Originally a simple internal tool made in Python/Streamlit  
 - It handled basic member records  
 - No real backend, no database schema, limited UI  
