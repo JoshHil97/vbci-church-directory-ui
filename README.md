@@ -1,9 +1,11 @@
 # 📖 VBCI Church Directory (React + TypeScript UI)
 
-The VBCI Church Directory started as a simple internal tool (the “Streamlit” version) and evolved into a complete full-stack system.  
-This repository contains the **modern React + TypeScript UI** for browsing, searching, and managing church members and ministries.
+The VBCI Church Directory started as a simple internal tool (the old “Streetlight” version) and eventually grew into a complete **full-stack church directory system**.  
+This repository contains the **modern React + TypeScript frontend**, built to connect to a Java Spring Boot API and display members, ministries, and other directory information in a clean, modern UI.
 
-The goal was to take something the church already needed and **level it up into a structured, scalable, and easy-to-use web application**.
+I rebuilt this project to take something the church already needed and **level it up into a structured, scalable, and easy-to-use web application**.
+
+---
 
 ## 🧰 Tech Stack
 
@@ -17,9 +19,71 @@ The goal was to take something the church already needed and **level it up into 
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-6DB33F?style=flat&logo=springboot&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat&logo=postgresql&logoColor=white)
 
-Backend repo: https://github.com/JoshHil97/church-directory-api  
-Original version: https://github.com/JoshHil97/church_directory
-**
+Backend API:  
+👉 https://github.com/JoshHil97/church-directory-api  
+
+Original Python version:  
+👉 https://github.com/JoshHil97/church_directory
+
+---
+
+## ✨ Features
+
+- Add new members with name, email, phone, and ministry
+- Full searchable directory (search by name, email, or ministry)
+- Filtered results update live as you type
+- Clean React + TypeScript UI
+- Tailwind-powered modern styling
+- Edit / Delete functionality for each member
+- Connects to Spring Boot API for all CRUD operations
+- Realistic church-use workflow
+
+---
+
+## 🖼 Screenshots
+
+### Add New Member  
+![Add Member](./screenshots/add-member.png)
+
+### All Members View  
+![All Members](./screenshots/all-members.png)
+
+### Search & Filtering  
+![Search Members](./screenshots/search-results.png)
+
+### Edit Member  
+![Edit Member](./screenshots/edit-member.png)
+
+---
+
+## 🔄 Evolution of This Project  
+### **From Streetlight → To Full-Stack App**
+
+**Version 1 — “Streetlight” (Original Python Version)**  
+- Originally a simple internal tool made in Python/Streamlit  
+- It handled basic member records  
+- No real backend, no database schema, limited UI  
+- Useful, but not scalable or easy to maintain
+
+**Version 2 — Full-Stack Rebuild (React + Spring Boot)**  
+- Frontend rewritten in React + TypeScript for speed and clarity  
+- Backend upgraded to a full Spring Boot REST API  
+- Database moved to PostgreSQL with proper relations  
+- Improved UI/UX with Tailwind and responsive layout  
+- Search, filtering, validation, and CRUD added  
+- Fully deployable architecture (Vercel + Render/Railway)
+
+This project is where my **full-stack problem-solving skills** really came to life — breaking complex things down until they made sense, then building them back cleanly.
+
+---
+
+## 🚀 Running the Project Locally
+
+### 1️⃣ Clone the repository
+```sh
+git clone https://github.com/JoshHil97/vbci-church-directory-ui.git
+cd vbci-church-directory-ui
+
 
 # React + TypeScript + Vite
 
