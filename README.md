@@ -5,6 +5,22 @@ This repository contains the **modern React + TypeScript UI** for browsing, sear
 
 The goal was to take something the church already needed and **level it up into a structured, scalable, and easy-to-use web application**.
 
+## 🧰 Tech Stack
+
+**Frontend:**  
+![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat&logo=vite&logoColor=white)
+![TailwindCSS](https://img.shields.io/badge/TailwindCSS-38B2AC?style=flat&logo=tailwindcss&logoColor=white)
+
+**Backend (separate repo):**  
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-6DB33F?style=flat&logo=springboot&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat&logo=postgresql&logoColor=white)
+
+Backend repo: https://github.com/JoshHil97/church-directory-api  
+Original version: https://github.com/JoshHil97/church_directory
+**
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
