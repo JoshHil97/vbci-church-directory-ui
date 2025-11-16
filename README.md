@@ -1,6 +1,6 @@
 # 📖 VBCI Church Directory (React + TypeScript UI)
 
-The VBCI Church Directory started as a simple internal tool (the old “Streetlight” version) and eventually grew into a complete **full-stack church directory system**.  
+The VBCI Church Directory started as a simple internal tool (the old “Streamlit” version) and eventually grew into a complete **full-stack church directory system**.  
 This repository contains the **modern React + TypeScript frontend**, built to connect to a Java Spring Boot API and display members, ministries, and other directory information in a clean, modern UI.
 
 I rebuilt this project to take something the church already needed and **level it up into a structured, scalable, and easy-to-use web application**.
