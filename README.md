@@ -1,3 +1,10 @@
+# 📖 VBCI Church Directory (React + TypeScript UI)
+
+The VBCI Church Directory started as a simple internal tool (the “Streetlight” version) and evolved into a complete full-stack system.  
+This repository contains the **modern React + TypeScript UI** for browsing, searching, and managing church members and ministries.
+
+The goal was to take something the church already needed and **level it up into a structured, scalable, and easy-to-use web application**.
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
